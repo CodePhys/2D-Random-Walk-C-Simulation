@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define EXP 10
+#define ERR "errore nell'apertura di un file\n"
+
+struct vet{
+  int x;
+  int y;
+};
+
+int main(int argc, char **argv){
+  
+  /* pf*: puntatore a file (* = a, c, d)
+     paa: puntatore ad array
+     seed: seed
+     ntm: numero taiettorie massimo
+     tms: tempo massimo
+     ndt: numero di traiettorie
+
+     tmp: tempo
+     ndi: numero di istogrammi
+     sdt: somma delle traiettorie
+     sdq: somma dei quadrati delle traiettorie
+     squ: somma delle potenze quarte
+     
+     pro: probabilità
+     dis: distanza
+     med: media
+     dsm: deviazione standard della media
+     mdq: media dei quadrati
+     dmq: deviazione standard della media dei quadrati */
+
+  FILE *pfa, **pfc, *pfd;
+  struct vet *pos;
+  char str[40];
+  unsigned int seed, ntm, tms, ndt, tmp = 1, ndi = 0, idx, nxt;
+  long long int sdt = 0;
+  unsigned long long int sdq = 0, squ = 0;
+  
+  double pro;// dis;
+  //long double med, dsm, mdq, dmq;
+  
+   if(argc != 3){
+    fprintf(stderr,"sintassi: ./<nome_programma> <tempo_max> <numero_traiettorie>");
+  }
+  
+  tms = atoi(argv[1]);
+  ntm = atoi(argv[2]);
+  
+  printf("tempo massimo: %d \t numero di traiettorie: %d\n", tms, ntm);
+  pos = (struct vet *)calloc(ntm,sizeof(struct vet));
+  
+  while(tmp <= tms){
+    ndi++;
+    tmp *= EXP;
+  }
+  pfc = (FILE**)calloc(ndi,sizeof(FILE*));
+  for(idx = 0; idx < ndi; idx++){
+    if(!idx){tmp = 1;}
+    else{tmp *= EXP;}
+    sprintf(str, "pos_al_tempo/pos_al_tempo_%u.dat", tmp);
+    if( (pfc[idx] = fopen(str,"w")) == NULL){
+      printf(ERR);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  /* impostazione generatore di numeri casuali */
+  pfa = fopen("/dev/random","r");
+  fread(&seed, sizeof(unsigned int), 1, pfa);
+  printf("seed: %u\n", seed);
+  srand(seed);
+  fclose(pfa);
+  
+  if( (pfa = fopen("traiettorie.dat","w")) == NULL ){
+    fprintf(stderr, ERR);
+    exit(EXIT_FAILURE);
+  }
+
+  if( (pfd = fopen("momenti_per_tempo.dat","w")) == NULL ){
+    fprintf(stderr,ERR);
+    exit(EXIT_FAILURE);
+  }
+
+  nxt = 1;
+  idx = 0;
+  for(tmp = 1; tmp <= tms; tmp++){
+    sdt = sdq = squ = 0;
+    for(ndt = 0; ndt < ntm; ndt++){
+      pro = (double)rand()/RAND_MAX;
+      if(pro < 0.25){pos[ndt].x++;}
+      else if(pro < 0.5){pos[ndt].x--;}
+      else if(pro < 0.75){pos[ndt].y++;}
+      else {pos[ndt].y--;}
+      //dis = sqrt(pos.x[ndt]*pos[ndt].x + pos[ndt].y*pos[ndt].y);
+      //sdt += pos[ndt];
+      //sdq += pos[ndt]*pos[ndt];
+      //squ += pos[ndt]*pos[ndt]*pos[ndt]*pos[ndt];
+      fprintf(pfa,"%u %d %d\n", tmp, pos[ndt].x, pos[ndt].y);
+      if(tmp == nxt){
+	fprintf(pfc[idx],"%d %d\n",pos[ndt].x, pos[ndt].y);
+      }
+    }
+    if(tmp == nxt){
+      nxt *= EXP;
+      idx++;
+    }
+    //med = (double)sdt/ntm;
+    //dsm = sqrt(((double)sdq/(ntm - 1) - med*med)/ntm);
+    //mdq = (double)sdq/ntm;
+    //dmq = sqrt(((double)squ/(ntm - 1) - mdq*mdq)/ntm);
+    //fprintf(pfd, "%u %Lf %Lf %Lf %Lf\n", tmp, med, dsm, mdq, dmq);
+  }
+  fclose(pfa);
+  for(idx = 0; idx < ndi; idx++){
+    fclose(pfc[idx]);
+  }
+  fclose(pfd);
+  return 0;
+}
